@@ -521,3 +521,7 @@ int SndSource::pull_data_overlap(int n, int no, int16_t* pulled_data, int16_t* o
 
   return total_read;
 }
+
+int SndSource::get_sample_rate(){
+	return options->sample_rate;
+}

@@ -112,6 +112,7 @@ public:
 	int skip_seconds(float seconds);
 
 	int get_time_in_bytes(float sec);
+	int get_sample_rate();
 
 protected:
 	void open_stream();

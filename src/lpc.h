@@ -50,4 +50,10 @@ void synthesis_filter(
   float Sn_[]	/* Nsam output synthesised speech samples */
 );
 
+void hanning_window(
+  float Sn[], /* input frame of speech samples */
+  float Wn[], /* output frame of windowed samples */
+  int Nsam  /* number of samples */
+);
+
 #endif

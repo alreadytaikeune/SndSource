@@ -1,12 +1,26 @@
 #include "lpc.h"
+#include <math.h>
 #include <assert.h>
-
+#include "window.h"
+#include <string.h>
 /*
 
   Credit: GNU Radio project
 
 */
 
+
+void hanning_window(
+  float Sn[], /* input frame of speech samples */
+  float Wn[], /* output frame of windowed samples */
+  int Nsam  /* number of samples */
+)
+{
+  int i;  /* loop variable */
+
+  for(i=0; i<Nsam; i++)
+    Wn[i] = Sn[i]*(0.5 - 0.5*cosf(2*M_PI*(float)i/(Nsam-1)));
+}
 
 /*---------------------------------------------------------------------------*\
 
@@ -28,11 +42,13 @@ void lpc_filter(
   int i;
 
 
-  assert(order < LPC_MAX);
+  assert(order < LPC_MAX_ORDER);
   assert(Nsam < LPC_MAX_N);
 
+  //memcpy(Wn, Sn, Nsam*sizeof(float));
+ //apply_windowf(Wn,Nsam,WINDOW_HANNING);
+  hanning_window(Sn,Wn,Nsam);
   autocorrelate(Wn,R,Nsam,order);
-
   levinson_durbin(R,a,order);
 
   *E = 0.0;
