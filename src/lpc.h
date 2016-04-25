@@ -12,7 +12,7 @@ typedef struct lpc_result{
 	float coefs[LPC_MAX_ORDER+1];
 } lpc_result;
 
-void lpc_filter(
+float lpc_filter(
   float Sn[],	/* Nsam samples with order sample memory */
   float a[],	/* order+1 LPCs with first coeff 1.0 */
   int Nsam,	/* number of input speech samples */

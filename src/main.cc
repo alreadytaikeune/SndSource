@@ -110,6 +110,16 @@ void merge_frames(float* out, float* flt_data, int n, int no, int frame_size, fl
 }
 
 
+void diff_vec(float* in, float* out, int n){
+  for(int k=0; k<n-1; k++)
+    out[k] = in[k+1]-in[k];
+}
+
+
+void scale(float* in, float e, int n){
+  for(int k=0;k<n;k++)
+    in[k]*=e;
+}
 
 void read_data_overlap(SndSource& src, SndWriter& writer, float time_frame, float time_overlap){
   int n = src.get_time_in_bytes(time_frame);
@@ -181,6 +191,7 @@ void lpc_filter(SndSource& lpcsrc, SndSource& exsrc, SndWriter& writer, float ti
   int16_t* to_write = (int16_t *) malloc(n+no);
 
   float* flt_data = (float *) malloc(frame_nb*sizeof(float));
+  float* diff = (float *) malloc(frame_nb*sizeof(float));
   float* synthetized = (float *) malloc(frame_nb*sizeof(float));
 
   int16_t* overlap = (int16_t *) malloc(no+1);
@@ -213,8 +224,9 @@ void lpc_filter(SndSource& lpcsrc, SndSource& exsrc, SndWriter& writer, float ti
     //   memset((uint8_t*) pulled_data2+no+total_read2, 0, n+2*no-total_read2);
 
     raw_to_flt(pulled_data, flt_data, frame_nb);
+    diff_vec(flt_data, diff, frame_nb);
     raw_to_flt(pulled_data2, res, frame_nb);
-    lpc_filter(flt_data, coefs, frame_nb, lpc_order, &error);
+    float energy = lpc_filter(diff, coefs, frame_nb-1, lpc_order, &error);
 
     for(int i=0;i<lpc_order+1;i++){
       std::cout << coefs[i] << " ";
@@ -222,10 +234,10 @@ void lpc_filter(SndSource& lpcsrc, SndSource& exsrc, SndWriter& writer, float ti
     std::cout << std::endl;
     memcpy(synthetized, res, lpc_order*sizeof(float));
 
-    synthesis_filter(res, coefs, frame_nb-lpc_order, lpc_order, synthetized+lpc_order);
+    synthesis_filter(res+lpc_order, coefs, frame_nb-lpc_order, lpc_order, synthetized+lpc_order);
 
     merge_frames(out, synthetized, n, no, frame_size, merge_overlap);
-
+    // scale(out, energy, (n+no)/frame_size);
     flt_to_raw(out, to_write, (n+no)/frame_size);
     writer.write((uint8_t *) to_write, (n+no));
   }
@@ -240,6 +252,7 @@ void lpc_filter(SndSource& lpcsrc, SndSource& exsrc, SndWriter& writer, float ti
   free(merge_overlap);
   free(res);
   free(to_write);
+  free(diff);
 }
 
 
@@ -247,6 +260,7 @@ void lpc_filter(SndSource& lpcsrc, SndSource& exsrc, SndWriter& writer, float ti
 
 int main(int argc, char *argv[]){
 	OpenOptions op;
+  OpenOptions op2;
   po::options_description desc("Allowed options");
   std::string out_filename;
   std::string src_file;
@@ -256,7 +270,7 @@ int main(int argc, char *argv[]){
     	("input,i", po::value(&op.filename), "the names of the input files")
   		("max", po::value(&op.max_time), "the maximum number of seconds to take into account")
     	("skip", po::value(&op.skip_time), "number of seconds to skip at the beginning")
-      ("rate", po::value(&op.sample_rate), "number of seconds to skip at the beginning")
+      ("rate", po::value(&op.sample_rate), "sample rate to use")
       ("ex", po::value(&ex_file), "File to be used as the excitation of the lpc filter")
       ("src", po::value(&src_file), "Source file used to compute the lpc coefficients")
       ("out,o", po::value(&out_filename), "Name of the file the write")
@@ -285,11 +299,14 @@ int main(int argc, char *argv[]){
   // read_data_overlap(src, writer, 0.02, 0.005f);
   // writer.close();
 
+  options_copy(&op, &op2);
 
   op.filename=src_file;
 	SndSource src(&op);
-  op.filename=ex_file;
-  SndSource ex(&op);
+  op2.filename=ex_file;
+  SndSource ex(&op2);
+  std::cout << src.get_sample_rate() << std::endl;
+  std::cout << ex.get_sample_rate() << std::endl;
   if(src.get_sample_rate() != ex.get_sample_rate()){
     std::cerr << "[ERROR] sample rates of inputs should match" << std::endl;
     exit(1);
@@ -304,6 +321,7 @@ int main(int argc, char *argv[]){
   format.sample_fmt= AV_SAMPLE_FMT_S16P;
   print_out_format(format);
   SndWriter writer(out_filename, &format);
+  print_out_format(format);
   writer.open();
   lpc_filter(src, ex, writer, 0.02f, 0.005f, 10);
   writer.close();

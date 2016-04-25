@@ -29,7 +29,7 @@ void hanning_window(
 
 \*---------------------------------------------------------------------------*/
 
-void lpc_filter(
+float lpc_filter(
   float Sn[],	/* Nsam samples with order sample memory */
   float a[],	/* order+1 LPCs with first coeff 1.0 */
   int Nsam,	/* number of input speech samples */
@@ -56,6 +56,7 @@ void lpc_filter(
     *E += a[i]*R[i];
   if (*E < 0.0)
     *E = 1E-12;
+  return R[0];
 }
 
 /*---------------------------------------------------------------------------*\
