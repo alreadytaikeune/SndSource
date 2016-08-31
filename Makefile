@@ -1,15 +1,33 @@
 CC=g++
 LIBS_FFMPEG=-lavutil -lavformat -lavcodec -lswscale -lswresample
 
-LIBS_MISC= -lstdc++ -lm -lz -lpthread \
--lfftw3 -lboost_program_options 
+LIBS_MISC= -lstdc++ -lm -ldl -lz -lpthread -lboost_program_options 
 
 LIBS=$(LIBS_MISC) $(LIBS_FFMPEG)
-INC=-Ilib
+
+FLIBS=libavformat libavutil libswscale libswresample libavcodec
+
+ifdef FFMPEG
+	INC = -I$(FFMPEG)
+	LIBPATH = $(addprefix -L$(FFMPEG), $(FLIBS))
+	# LIBS_FFMPEG=-l:$(FFMPEG)/lib/libavformat.a -l:$(FFMPEG)/lib/libavutil.a  \
+	# -l:$(FFMPEG)/lib/libswscale.a -l:$(FFMPEG)/lib/libswresample.a -l:$(FFMPEG)/lib/libavcodec.a
+	noop=
+	space = $(noop) $(noop)
+	coma =,
+	PFLIBS = $(addprefix $(FFMPEG), $(FLIBS))
+	LDPATH=-Wl,$(subst $(space),$(coma),$(addprefix -rpath$(coma), $(PFLIBS)))
+endif
+
+ifdef BOOST
+	INC := $(INC) -I$(BOOST)
+	LIBPATH := $(LIBPATH) -L$(BOOST)/stage/lib
+endif
+
 CFLAGS=-std=c++11 -g -O0
 
 
-LINKER   = gcc -o
+LINKER   = g++ -o
 # linking flags here
 LFLAGS   = -Wall 
 
@@ -23,11 +41,12 @@ OBJ=$(SRC:$(SRCDIR)/%.cc=$(OBJDIR)/%.o)
 
 
 $(BINDIR)/$(TARGET): $(OBJ)
-	@echo $(LINKER) $@ $(LFLAGS) $(OBJ) $(LIBPATH) $(LIBS)
-	@$(LINKER) $@ $(LFLAGS) $(OBJ) $(LIBPATH) $(LIBS)
+	@echo $(LINKER) $@ $(LFLAGS) $(OBJ) $(LIBPATH) $(LIBS) $(LDPATH)
+	@$(LINKER) $@ $(LFLAGS) $(OBJ) $(LIBPATH) $(LIBS) $(LDPATH)
 	@echo "Linking complete!"
 
 $(OBJ): $(OBJDIR)/%.o : $(SRCDIR)/%.cc
+	@echo $(CC) $(CFLAGS) -c $< -o $@ $(INC)
 	@$(CC) $(CFLAGS) -c $< -o $@ $(INC)
 	@echo "Compiled "$<" successfully!"
 
