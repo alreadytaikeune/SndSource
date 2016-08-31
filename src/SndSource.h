@@ -15,6 +15,8 @@ extern "C" {
 #include "ringbuffer.h"
 #include <mutex>
 
+#define THREAD_SAFE 0
+
 
 #define MAX_AUDIO_FRAME_SIZE 192000
 #define SECONDS_IN_BUFFER 10
@@ -27,7 +29,9 @@ typedef struct PacketQueue {
   int nb_packets;
   int nb_packets_max;
   int size;
+  #if THREAD_SAFE
   std::mutex queue_operation_mutex;
+  #endif
 } PacketQueue;
 
 
@@ -76,10 +80,12 @@ public:
 	
 	/*
 
-		Main interface function, pulls size bytes from the ringbuffer. Returns the number of bytes read. 
+		Main interface function, pulls nb_frames frames from the ringbuffer. Returns the number of frames read. 
 		If < 0 the stream is finished, there is no more data to pull.
+
+        nb_frames = number of bytes in the buffer divided by sizeof(int16_t)
 	*/
-	int pull_data(uint8_t* buf, int size, int reader);
+	int pull_data(int16_t* buf, int nb_frames, int reader);
 
 /*
              Frame
@@ -106,7 +112,6 @@ public:
 	SndSource(OpenOptions* op);
 	~SndSource();
 
-	int get_sampling();
 	void reset(std::string f);
 	std::string get_filename();
 	int skip_seconds(float seconds);
@@ -138,13 +143,15 @@ private:
 	bool no_more_packets=false;
 	RingBuffer* data_buffer = (RingBuffer *) malloc(sizeof(RingBuffer));
 	SwrContext *swr=NULL; // the resampling context for outputting with standard format in data_buffer
-	// Condition for write availability in the data buffer not to do busy wait
+	#if THREAD_SAFE
+    // Condition for write availability in the data buffer not to do busy wait
 	// in the dump_queue method
 	pthread_mutex_t data_writable_mutex;
 
 	// Condition for write availability in the data buffer not to do busy wait
 	// in the dump_queue method
 	pthread_cond_t data_writable_cond;
+    #endif
 
 
 };

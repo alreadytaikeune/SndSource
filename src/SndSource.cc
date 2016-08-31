@@ -31,7 +31,9 @@ static bool is_empty(PacketQueue* q){
 
 static void queue_flush(PacketQueue *q){
 	AVPacketList* pt = q->first_pkt;
+    #if THREAD_SAFE
 	q->queue_operation_mutex.lock();
+    #endif
 	while(pt){
 		q->size-=q->first_pkt->pkt.size;
 		q->first_pkt=pt->next;
@@ -39,7 +41,9 @@ static void queue_flush(PacketQueue *q){
 		av_free(pt);
 		pt=q->first_pkt;
 	}
+    #if THREAD_SAFE
 	q->queue_operation_mutex.unlock();
+    #endif
 	q->nb_packets=0;
 	q->first_pkt=NULL;
 	q->last_pkt=NULL;
@@ -58,8 +62,9 @@ static int packet_queue_put(PacketQueue *q, AVPacket *pkt) {
     return -1;
   pkt1->pkt = *pkt;
   pkt1->next = NULL;
-
+  #if THREAD_SAFE
   q->queue_operation_mutex.lock();
+  #endif
   
   if (!q->last_pkt)
     q->first_pkt = pkt1;
@@ -68,14 +73,18 @@ static int packet_queue_put(PacketQueue *q, AVPacket *pkt) {
   q->last_pkt = pkt1;
   q->nb_packets++;
   q->size += pkt1->pkt.size;
+  #if THREAD_SAFE
   q->queue_operation_mutex.unlock();
+  #endif
   return 0;
 }
 
 static int packet_queue_get(PacketQueue *q, AVPacket *pkt) {
   AVPacketList *pkt1;
   int ret;
+  #if THREAD_SAFE
   q->queue_operation_mutex.lock();
+  #endif
   pkt1 = q->first_pkt;
   if (pkt1) {
     q->first_pkt = pkt1->next;
@@ -90,7 +99,9 @@ static int packet_queue_get(PacketQueue *q, AVPacket *pkt) {
   else{
     ret = 0;
   }
+  #if THREAD_SAFE
   q->queue_operation_mutex.unlock();
+  #endif
   return ret;
 }
 
@@ -128,9 +139,13 @@ SndSource::SndSource(OpenOptions* op){
 		std::cerr << "Error creating ring buffer" << std::endl;
 		exit(EXIT_FAILURE);
 	}
+
+    #if THREAD_SAFE
 	/* Initialize mutex and condition variable objects */
   	pthread_mutex_init(&data_writable_mutex, NULL);
   	pthread_cond_init (&data_writable_cond, NULL);
+
+    #endif
 
 	if(options->max_time>0){
 		max_byte = options->max_time*conversion_out_format.sample_rate*av_get_bytes_per_sample(conversion_out_format.sample_fmt);
@@ -138,7 +153,7 @@ SndSource::SndSource(OpenOptions* op){
 
 	open_stream();
 	fill_buffer();
-
+    std::cout << "snd source created" << std::endl;
 }
 
 void SndSource::reset(std::string f){
@@ -161,8 +176,10 @@ SndSource::~SndSource(){
 	rb_free(data_buffer);
 	swr_free(&swr);
 	avformat_close_input(&pFormatCtx);
+    #if THREAD_SAFE
 	pthread_mutex_destroy(&data_writable_mutex);
 	pthread_cond_destroy(&data_writable_cond);
+    #endif
 	avcodec_free_context(&pCodecCtx);
 	
 }
@@ -397,7 +414,10 @@ int SndSource::audio_decode_frame(AVCodecContext *pCodecCtx, uint8_t *audio_buf,
 
 
 int SndSource::fill_buffer(){
+    std::cout << "filling buffer" << std::endl;
+    #if THREAD_SAFE
 	pthread_mutex_lock(&data_writable_mutex);
+    #endif
 
 	int to_write = rb_get_write_space(data_buffer);
 	int lread=0, len_written=0;
@@ -431,7 +451,10 @@ int SndSource::fill_buffer(){
 			} 
 		}
 	}
+    #if THREAD_SAFE
 	pthread_mutex_unlock(&data_writable_mutex);
+    #endif
+    std::cout << "buffer filled" << std::endl;
 	return len_written;
 }
 
@@ -467,7 +490,8 @@ int SndSource::fill_packet_queue(){
 }
 
 
-int SndSource::pull_data(uint8_t* buf, int size, int reader){
+int SndSource::pull_data(int16_t* buf, int nb_frames, int reader){
+    int size = nb_frames*2;
 	int len, lread, total_read;
 	len=size;
 	lread=0;
@@ -481,7 +505,7 @@ int SndSource::pull_data(uint8_t* buf, int size, int reader){
 				break;
 		}
 	}
-	return total_read;
+	return total_read/2;
 }
 
 /*
@@ -506,7 +530,7 @@ int SndSource::pull_data(uint8_t* buf, int size, int reader){
 */
 int SndSource::pull_data_overlap(int n, int no, int16_t* pulled_data, int16_t* overlap){
   int total_read=0;
-  total_read=pull_data((uint8_t*) pulled_data+no, n+no, 0); // writing pulled data after the part from previous frame
+  total_read=pull_data(pulled_data+no, n+no, 0); // writing pulled data after the part from previous frame
   if(total_read == 0){
     return 0;
   }
@@ -524,4 +548,9 @@ int SndSource::pull_data_overlap(int n, int no, int16_t* pulled_data, int16_t* o
 
 int SndSource::get_sample_rate(){
 	return options->sample_rate;
+}
+
+
+std::string SndSource::get_filename(){
+    return this->options->filename;
 }

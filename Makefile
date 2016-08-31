@@ -24,25 +24,29 @@ ifdef BOOST
 	LIBPATH := $(LIBPATH) -L$(BOOST)/stage/lib
 endif
 
-CFLAGS=-std=c++11 -g -O0
+CFLAGS=-std=c++11 -g -O0 -fPIC
 
 
-LINKER   = g++ -o
+LINKER   = g++
 # linking flags here
-LFLAGS   = -Wall 
+LFLAGS   = -Wall -shared 
 
 SRCDIR   = src
 OBJDIR   = obj
 BINDIR   = bin
+LIBDIR   = lib
 
 TARGET=sndsource
 SRC=$(wildcard src/**/*.cc src/*.cc)
 OBJ=$(SRC:$(SRCDIR)/%.cc=$(OBJDIR)/%.o)
 
+all: clean $(BINDIR)/$(TARGET) lib
+	$(MAKE) -C python
 
-$(BINDIR)/$(TARGET): $(OBJ)
-	@echo $(LINKER) $@ $(LFLAGS) $(OBJ) $(LIBPATH) $(LIBS) $(LDPATH)
-	@$(LINKER) $@ $(LFLAGS) $(OBJ) $(LIBPATH) $(LIBS) $(LDPATH)
+
+$(BINDIR)/$(TARGET): build $(OBJ)
+	@echo $(LINKER) $(LFLAGS) $(OBJ) $(LIBPATH) $(LIBS) $(LDPATH) -o $@
+	@$(LINKER) $(LFLAGS) $(OBJ) $(LIBPATH) $(LIBS) $(LDPATH) -o $@
 	@echo "Linking complete!"
 
 $(OBJ): $(OBJDIR)/%.o : $(SRCDIR)/%.cc
@@ -50,12 +54,19 @@ $(OBJ): $(OBJDIR)/%.o : $(SRCDIR)/%.cc
 	@$(CC) $(CFLAGS) -c $< -o $@ $(INC)
 	@echo "Compiled "$<" successfully!"
 
-build:
+build: 
 	@- if [ ! -d "$(OBJDIR)" ]; then mkdir "$(OBJDIR)"; fi
 	@- if [ ! -d "$(BINDIR)" ]; then mkdir "$(BINDIR)"; fi
 
 .PHONY: lib
 
+lib: libsndsource.so
+	@- if [ ! -d "$(LIBDIR)" ]; then mkdir "$(LIBDIR)"; fi
+	@- mv libsndsource.so $(LIBDIR)
+
+
+libsndsource.so: obj/SndSource.o obj/SndWriter.o obj/ringbuffer.o
+	$(LINKER) $^ $(LFLAGS) $(LIBPATH) $(LIBS) $(LDPATH) -Wl,-soname,$@ -o $@
 
 .PHONY: clean
 clean:

@@ -1,0 +1,7 @@
+sndsource.py
+_sndsource.so
+sndsource_wrap.cxx
+sndsource_wrap.h
+sndsource_wrap.o
+*~
+*.pyc

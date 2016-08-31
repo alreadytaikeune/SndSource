@@ -26,12 +26,12 @@ void read_data(SndSource& src, SndWriter& writer){
 	int total_read=0;
 
 	while(1){
-		total_read=src.pull_data((uint8_t*) pulled_data, (int) window_size*2, 0);
+		total_read=src.pull_data(pulled_data, (int) window_size, 0);
 		if(total_read == 0){
 			break;
 		}
 
-    writer.write((uint8_t *) pulled_data, window_size*2);
+    writer.write((uint8_t *) pulled_data, window_size);
 	}
 
 	free(pulled_data);
