@@ -1,30 +1,42 @@
 # Dependencies
 
 ## FFMPEG libraries
--lavutil
--lavformat
--lavcodec
--lswscale
--lswresample
+- lavutil
+- lavformat
+- lavcodec
+- lswscale
+- lswresample
 
 ## Miscellaneous libraries
--lpthread
--lfftw3
--lboost_program_options
+* lpthread
+* lfftw3
+* lboost_program_options
 
 # Install
 
 Just run:
 
+```
 make build
 
 make
+```
 
+# Build libsndsource
+
+```
+make lib
+```
+
+# Make python wrapper and everything else
+```
+make all
+```
 
 # Examples
 ## Basic way to read data:
 
-
+```c
 void read_data(SndSource& src){
 
 	int window_size=2048;
@@ -42,11 +54,11 @@ void read_data(SndSource& src){
 
 	free(pulled_data);
 }
-
+```
 
 ## Example of reading overlaping data :
 
-
+```c
 void read_data_overlap(SndSource& src, float time_frame, float time_overlap){
 
   int n = src.get_time_in_bytes(time_frame);
@@ -74,5 +86,9 @@ void read_data_overlap(SndSource& src, float time_frame, float time_overlap){
   free(overlap);
   free(out);
   free(merge_overlap);
-  
+
 }
+```
+
+## Using the wrapper
+See test.py for examples of how to use the wrapper.
