@@ -29,7 +29,7 @@ CFLAGS=-std=c++11 -g -O0 -fPIC
 
 LINKER   = g++
 # linking flags here
-LFLAGS   = -Wall -shared 
+LFLAGS   = -Wall
 
 SRCDIR   = src
 OBJDIR   = obj
@@ -46,7 +46,7 @@ all: clean $(BINDIR)/$(TARGET) lib
 
 $(BINDIR)/$(TARGET): build $(OBJ)
 	@echo $(LINKER) $(LFLAGS) $(OBJ) $(LIBPATH) $(LIBS) $(LDPATH) -o $@
-	@$(LINKER) $(LFLAGS) $(OBJ) $(LIBPATH) $(LIBS) $(LDPATH) -o $@
+	@$(LINKER) $(LFLAGS) $(OBJ) $(LIBPATH) $(LIBS) $(LDPATH) -Wl,--no-as-needed -o $@
 	@echo "Linking complete!"
 
 $(OBJ): $(OBJDIR)/%.o : $(SRCDIR)/%.cc
@@ -66,7 +66,7 @@ lib: libsndsource.so
 
 
 libsndsource.so: obj/SndSource.o obj/SndWriter.o obj/ringbuffer.o
-	$(LINKER) $^ $(LFLAGS) $(LIBPATH) $(LIBS) $(LDPATH) -Wl,-soname,$@ -o $@
+	$(LINKER) $^ $(LFLAGS) -shared $(LIBPATH) $(LIBS) $(LDPATH) -Wl,-soname,$@ -o $@
 
 .PHONY: clean
 clean:

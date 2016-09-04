@@ -31,7 +31,7 @@ void read_data(SndSource& src, SndWriter& writer){
 			break;
 		}
 
-    writer.write((uint8_t *) pulled_data, window_size);
+    writer.write(pulled_data, window_size);
 	}
 
 	free(pulled_data);
@@ -159,7 +159,7 @@ void read_data_overlap(SndSource& src, SndWriter& writer, float time_frame, floa
     std::cout << std::endl;
     flt_to_raw(out, to_write, (n+no)/frame_size);
 
-    writer.write((uint8_t *) to_write, (n+no));
+    writer.write(to_write, (n+no)/frame_size);
   }
 
   free(flt_data);
@@ -239,7 +239,7 @@ void lpc_filter(SndSource& lpcsrc, SndSource& exsrc, SndWriter& writer, float ti
     merge_frames(out, synthetized, n, no, frame_size, merge_overlap);
     // scale(out, energy, (n+no)/frame_size);
     flt_to_raw(out, to_write, (n+no)/frame_size);
-    writer.write((uint8_t *) to_write, (n+no));
+    writer.write(to_write, (n+no)/frame_size);
   }
 
   free(flt_data);
@@ -284,22 +284,22 @@ int main(int argc, char *argv[]){
             options(desc).positional(p).run(), vm);
   po::notify(vm);
   
-  // SndSource src(&op);
-  // OutFormat format;
-  // format.sample_rate=float(src.get_sample_rate());
-  // format.channels=1;
-  // format.channel_layout=AV_CH_LAYOUT_MONO;
-  // format.out_codec=AV_CODEC_ID_MP3;
-  // format.bitrate = 64000;
-  // format.sample_fmt= AV_SAMPLE_FMT_S16P;
-  // SndWriter writer(out_filename, &format);
-  // writer.open();
+  SndSource src(&op);
+  OutFormat format;
+  format.sample_rate=float(src.get_sample_rate());
+  format.channels=1;
+  format.channel_layout=AV_CH_LAYOUT_MONO;
+  format.out_codec=AV_CODEC_ID_MP3;
+  format.bitrate = 64000;
+  format.sample_fmt= AV_SAMPLE_FMT_S16P;
+  SndWriter writer(out_filename, &format);
+  writer.open();
 
-  // // read_data(src, writer);
-  // read_data_overlap(src, writer, 0.02, 0.005f);
-  // writer.close();
+  // read_data(src, writer);
+  read_data_overlap(src, writer, 0.02, 0.005f);
+  writer.close();
 
-  options_copy(&op, &op2);
+ /* options_copy(&op, &op2);
 
   op.filename=src_file;
 	SndSource src(&op);
@@ -324,7 +324,7 @@ int main(int argc, char *argv[]){
   print_out_format(format);
   writer.open();
   lpc_filter(src, ex, writer, 0.02f, 0.005f, 10);
-  writer.close();
+  writer.close();*/
 
 	return 0;
 }

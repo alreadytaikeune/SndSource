@@ -2,6 +2,7 @@
 #include <iostream>
 
 SndWriter::SndWriter(std::string name, OutFormat* format){
+    av_register_all();
 	filename=name;
 	out_format=format;
 	idx=0;
@@ -19,12 +20,14 @@ static int check_sample_fmt(AVCodec *codec, enum AVSampleFormat sample_fmt)
 	return 0;
 }
 
-int SndWriter::write(uint8_t* buf, int n){
+int SndWriter::write(int16_t* frames, int frame_nb){
+
 	if(!opened){
 		std::cerr << "[ERROR]: stream not opened" << std::endl;
 		exit(1);
 	}
-
+    uint8_t* buf = (uint8_t*) frames;
+    int n = frame_nb*sizeof(int16_t);
 	int ret=0;
 	int got_output;
 	for(int i=0;i<n;i++){
@@ -50,6 +53,15 @@ int SndWriter::write(uint8_t* buf, int n){
 
 int SndWriter::open(){
 	codec = avcodec_find_encoder(out_format->out_codec);
+    if(codec == 0){
+        fprintf(stderr, "Could not find codec %d\n", out_format->out_codec);
+        codec = avcodec_find_encoder(AV_CODEC_ID_MP3);
+        if(codec == 0){
+            fprintf(stderr, "Quitting\n"); 
+            exit(1);
+        }
+        fprintf(stderr, "But found mp3 %d\n", AV_CODEC_ID_MP3);
+    }
 	ctx = avcodec_alloc_context3(codec);
 	ctx->bit_rate=out_format->bitrate;
 	ctx->channels = out_format->channels;
@@ -57,6 +69,8 @@ int SndWriter::open(){
 	ctx->sample_fmt= out_format->sample_fmt;
 	ctx->channel_layout=out_format->channel_layout;
 	avframe=av_frame_alloc();
+
+    std::cout << "frame alloc'd" << std::endl;
 	f = fopen(filename.c_str(), "wb");
 
 	if (!check_sample_fmt(codec, ctx->sample_fmt)) {

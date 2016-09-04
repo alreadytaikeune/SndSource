@@ -36,7 +36,7 @@ class SndWriter{
 public:
 	SndWriter(std::string name, OutFormat* format);
 	~SndWriter();
-	int write(uint8_t* buf, int size);
+	int write(int16_t* frames, int frame_nb);
 	int open();
 	int close();
 

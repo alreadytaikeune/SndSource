@@ -2,7 +2,7 @@
 
 %{
     #define SWIG_FILE_WITH_INIT
-    #include "../src/SndWriter.h"
+    #include "SndWriter2.h"
     #include "SndSource2.h"
 %}
 
@@ -15,5 +15,6 @@ import_array();
 
 
 
-%include "../src/SndWriter.h"
+%include "SndWriter2.h"
 %include "SndSource2.h"
+%include "enums.h"

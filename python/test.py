@@ -15,4 +15,16 @@ x = a/float(2**15)
 
 plt.plot(x)
 
-plt.show()
+#plt.show()
+of = s.OutFormat()
+s.print_out_format(of)
+wt = s.SndWriter("la.mp3", of)
+wt.open()
+print "opened"
+while snd.pull_data(a, 0) > 0:
+    print "writing"
+    wt.write(a)
+
+wt.close()
+
+
